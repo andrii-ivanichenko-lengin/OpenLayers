@@ -69,7 +69,6 @@ const App: React.FC = () => {
       addMarker(location.name, location.coordinates)
     );
 
-    // Create Popup Overlay
     const overlay = new Overlay({
       element: popupContainerRef.current!,
       positioning: "top-center",
@@ -80,7 +79,7 @@ const App: React.FC = () => {
     map.addOverlay(overlay);
     overlayRef.current = overlay;
 
-    // Click event to show popups
+  
     map.on("singleclick", (event) => {
       const feature = map.forEachFeatureAtPixel(
         event.pixel,
@@ -98,7 +97,7 @@ const App: React.FC = () => {
       }
     });
 
-    // Double-click to add a new point
+
     map.on("dblclick", (event) => {
       event.preventDefault();
       const coordinates = toLonLat(event.coordinate);
@@ -113,7 +112,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Function to add a new marker
   const addMarker = (name: string, coordinates: Coordinate) => {
     const feature = new Feature({
       geometry: new Point(fromLonLat(coordinates)),
@@ -132,7 +130,7 @@ const App: React.FC = () => {
     vectorSourceRef.current.addFeature(feature);
   };
 
-  // Function to create a flight path
+
   const createFlightPath = () => {
     if (!mapInstance.current) return;
 
@@ -142,7 +140,7 @@ const App: React.FC = () => {
       return;
     }
 
-    // Remove old path and airplane before creating a new one
+    
     if (flightPath) vectorSourceRef.current.removeFeature(flightPath);
     if (airplane) vectorSourceRef.current.removeFeature(airplane);
 
@@ -169,7 +167,6 @@ const App: React.FC = () => {
     createAirplane(coordinates[0]);
   };
 
-  // Function to create an airplane icon
   const createAirplane = (startCoordinate: Coordinate) => {
     const plane = new Feature({
       geometry: new Point(startCoordinate),
@@ -188,7 +185,6 @@ const App: React.FC = () => {
     setAirplane(plane);
   };
 
-  // Function to animate the airplane
   const startFlightAnimation = () => {
     if (!mapInstance.current || !flightPath || !airplane) {
       alert("Create a flight path first!");
@@ -265,9 +261,9 @@ const App: React.FC = () => {
       }}
     >
       <h2>🗺️ OpenLayers React Map (TSX) - Realistic Flight Animation</h2>
-      <p>📍 **Double-click to add a new point!**</p>
-      <p>🛫 **Click "Create Flight Path" to draw a route!**</p>
-      <p>✈️ **Click "Start Flight" to animate the airplane smoothly!**</p>
+      <p>📍 Double-click to add a new point!</p>
+      <p>🛫 Click "Create Flight Path" to draw a route!</p>
+      <p>✈️ Click "Start Flight" to animate the airplane smoothly!</p>
       <div
         style={{
           display: "flex",
