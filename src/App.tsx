@@ -201,8 +201,7 @@ const App: React.FC = () => {
     }
 
     const flightCoordinates = (flightPath.getGeometry() as LineString)
-      .getCoordinates()
-      .slice(2);
+      .getCoordinates();
 
     if (flightCoordinates.length < 2) {
       alert("Not enough unique points to animate.");
