@@ -1,23 +1,24 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
 import { Feature } from "ol";
-import { Point } from "ol/geom";
+import { Point, LineString } from "ol/geom";
 import { Vector as VectorLayer } from "ol/layer";
 import { Vector as VectorSource } from "ol/source";
-import { Style, Icon } from "ol/style";
+import { Style, Icon, Stroke } from "ol/style";
+import { Coordinate } from "ol/coordinate";
 import Overlay from "ol/Overlay";
 
 type Location = {
   name: string;
-  coordinates: [number, number];
+  coordinates: Coordinate;
 };
 
-const locations: Location[] = [
+const initialLocations: Location[] = [
   {
     name: "Amazon Office",
     coordinates: [-122.338356, 47.615257],
@@ -30,12 +31,18 @@ const locations: Location[] = [
 
 const App: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
+  const vectorSourceRef = useRef(new VectorSource());
+  const mapInstance = useRef<Map | null>(null);
+  const [flightPath, setFlightPath] = useState<Feature | null>(null);
+  const [airplane, setAirplane] = useState<Feature | null>(null);
+  const [isFlying, setIsFlying] = useState(false);
+
   const popupContainerRef = useRef<HTMLDivElement>(null);
   const popupContentRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<Overlay | null>(null);
 
   useEffect(() => {
-    if (!mapRef.current || !popupContainerRef.current) return;
+    if (!mapRef.current) return;
 
     const map = new Map({
       target: mapRef.current,
@@ -45,36 +52,22 @@ const App: React.FC = () => {
         }),
       ],
       view: new View({
-        center: fromLonLat(locations[0].coordinates),
+        center: fromLonLat(initialLocations[0].coordinates),
         zoom: 5,
       }),
     });
 
-    const vectorSource = new VectorSource();
-    locations.forEach((location) => {
-      const feature = new Feature({
-        geometry: new Point(fromLonLat(location.coordinates)),
-      });
-
-      feature.setStyle(
-        new Style({
-          image: new Icon({
-            src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg",
-            scale: 1,
-          }),
-        })
-      );
-
-      feature.set("name", location.name);
-      vectorSource.addFeature(feature);
-    });
+    mapInstance.current = map;
 
     const vectorLayer = new VectorLayer({
-      source: vectorSource,
+      source: vectorSourceRef.current,
     });
 
     map.addLayer(vectorLayer);
 
+    initialLocations.forEach((location) => addMarker(location.name, location.coordinates));
+
+    // Create Popup Overlay
     const overlay = new Overlay({
       element: popupContainerRef.current!,
       positioning: "top-center",
@@ -85,9 +78,10 @@ const App: React.FC = () => {
     map.addOverlay(overlay);
     overlayRef.current = overlay;
 
+    // Click event to show popups
     map.on("singleclick", (event) => {
       const feature = map.forEachFeatureAtPixel(event.pixel, (feature) => feature as Feature);
-      if (feature) {
+      if (feature && feature.get("name")) {
         const coordinates = (feature.getGeometry() as Point).getCoordinates();
         overlay.setPosition(coordinates);
         if (popupContentRef.current) {
@@ -99,38 +93,156 @@ const App: React.FC = () => {
       }
     });
 
+    // Double-click to add a new point
+    map.on("dblclick", (event) => {
+      event.preventDefault();
+      const coordinates = toLonLat(event.coordinate);
+      const name = prompt("Enter dot name:");
+      if (name) {
+        addMarker(name, coordinates);
+      }
+    });
+
     return () => {
       map.setTarget(undefined);
     };
   }, []);
 
-  return (
-    <div style={{ width: "100%", display: "flex", alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-    
+  // Function to add a new marker
+  const addMarker = (name: string, coordinates: Coordinate) => {
+    const feature = new Feature({
+      geometry: new Point(fromLonLat(coordinates)),
+    });
 
-      
-      <h2>OpenLayers React Map (TSX)</h2>
-      <div ref={mapRef} style={{ width: "100%", height: "90vh", position: "relative" }}></div>
-      
-      <div
-        ref={popupContainerRef}
-        className="popup"
-        style={{
-          display: "none",
-          position: "absolute",
-          background: "white",
-          padding: "10px",
-          borderRadius: "8px",
-          boxShadow: "0px 4px 10px rgba(0,0,0,0.2)",
-          transform: "translate(-50%, -100%)",
-          pointerEvents: "none",
-          fontWeight: "bold",
-          color: 'red'
-        }}
-      >
-        <div ref={popupContentRef}></div>
-        </div>
-       
+    feature.setStyle(
+      new Style({
+        image: new Icon({
+          src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg",
+          scale: 0.6,
+        }),
+      })
+    );
+
+    feature.set("name", name);
+    vectorSourceRef.current.addFeature(feature);
+  };
+
+  // Function to create a flight path
+  const createFlightPath = () => {
+    if (!mapInstance.current) return;
+
+    const features = vectorSourceRef.current.getFeatures();
+    if (features.length < 2) {
+      alert("Please add at least 2 points to create a flight path!");
+      return;
+    }
+
+    // Remove old path and airplane before creating a new one
+    if (flightPath) vectorSourceRef.current.removeFeature(flightPath);
+    if (airplane) vectorSourceRef.current.removeFeature(airplane);
+
+    const coordinates = features.map((feature) => {
+      const point = feature.getGeometry() as Point;
+      return point.getCoordinates();
+    });
+
+    const line = new Feature({
+      geometry: new LineString(coordinates),
+    });
+
+    line.setStyle(
+      new Style({
+        stroke: new Stroke({
+          color: "blue",
+          width: 2,
+        }),
+      })
+    );
+
+    vectorSourceRef.current.addFeature(line);
+    setFlightPath(line);
+    createAirplane(coordinates[0]);
+  };
+
+  // Function to create an airplane icon
+  const createAirplane = (startCoordinate: Coordinate) => {
+    const plane = new Feature({
+      geometry: new Point(startCoordinate),
+    });
+
+    plane.setStyle(
+      new Style({
+        image: new Icon({
+          src: "https://upload.wikimedia.org/wikipedia/commons/0/01/Airplane_silhouette_45degree_angle.svg",
+          scale: 0.1,
+        }),
+      })
+    );
+
+    vectorSourceRef.current.addFeature(plane);
+    setAirplane(plane);
+  };
+
+  // Function to animate the airplane
+  const startFlightAnimation = () => {
+    if (!mapInstance.current || !flightPath || !airplane) {
+      alert("Create a flight path first!");
+      return;
+    }
+
+    const flightCoordinates = (flightPath.getGeometry() as LineString).getCoordinates().slice(2);
+
+    if (flightCoordinates.length < 2) {
+      alert("Not enough unique points to animate.");
+      return;
+    }
+
+    let currentIndex = 0;
+    const totalDuration = 5000;
+    const stepsPerSegment = 100;
+    const segmentDuration = totalDuration / flightCoordinates.length;
+
+    setIsFlying(true);
+
+    const interpolate = (start: Coordinate, end: Coordinate, fraction: number): Coordinate => {
+      return [
+        start[0] + (end[0] - start[0]) * fraction,
+        start[1] + (end[1] - start[1]) * fraction,
+      ];
+    };
+
+    const flyToNextSegment = (start: Coordinate, end: Coordinate, step = 0) => {
+      if (step > stepsPerSegment) {
+        currentIndex++;
+        if (currentIndex < flightCoordinates.length - 1) {
+          flyToNextSegment(flightCoordinates[currentIndex], flightCoordinates[currentIndex + 1]);
+        } else {
+          setTimeout(() => {
+            vectorSourceRef.current.removeFeature(airplane!);
+            vectorSourceRef.current.removeFeature(flightPath!);
+            setAirplane(null);
+            setFlightPath(null);
+            setIsFlying(false);
+          }, 1000);
+        }
+        return;
+      }
+
+      const fraction = step / stepsPerSegment;
+      airplane!.setGeometry(new Point(interpolate(start, end, fraction)));
+
+      setTimeout(() => flyToNextSegment(start, end, step + 1), segmentDuration / stepsPerSegment);
+    };
+
+    flyToNextSegment(flightCoordinates[0], flightCoordinates[1]);
+  };
+
+  return (
+    <div>
+      <button disabled={isFlying} onClick={createFlightPath}>Create Flight Path</button>
+      <button disabled={isFlying} onClick={startFlightAnimation}>Start Flight</button>
+      <div ref={mapRef} style={{ width: "100%", height: "80vh" }}></div>
+      <div ref={popupContainerRef}><div ref={popupContentRef}></div></div>
     </div>
   );
 };
