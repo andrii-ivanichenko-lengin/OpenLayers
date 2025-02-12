@@ -133,26 +133,32 @@ const App: React.FC = () => {
 
   const createFlightPath = () => {
     if (!mapInstance.current) return;
-
-    const features = vectorSourceRef.current.getFeatures();
+  
+    const features = vectorSourceRef.current.getFeatures().filter(feature => feature.get("name"));
+  
     if (features.length < 2) {
       alert("Please add at least 2 points to create a flight path!");
       return;
     }
-
-    
-    if (flightPath) vectorSourceRef.current.removeFeature(flightPath);
-    if (airplane) vectorSourceRef.current.removeFeature(airplane);
-
+  
+    if (flightPath) {
+      vectorSourceRef.current.removeFeature(flightPath);
+      setFlightPath(null);
+    }
+    if (airplane) {
+      vectorSourceRef.current.removeFeature(airplane);
+      setAirplane(null);
+    }
+  
     const coordinates = features.map((feature) => {
       const point = feature.getGeometry() as Point;
       return point.getCoordinates();
     });
-
+  
     const line = new Feature({
       geometry: new LineString(coordinates),
     });
-
+  
     line.setStyle(
       new Style({
         stroke: new Stroke({
@@ -161,11 +167,14 @@ const App: React.FC = () => {
         }),
       })
     );
-
+  
     vectorSourceRef.current.addFeature(line);
     setFlightPath(line);
+  
     createAirplane(coordinates[0]);
   };
+  
+  
 
   const createAirplane = (startCoordinate: Coordinate) => {
     const plane = new Feature({
