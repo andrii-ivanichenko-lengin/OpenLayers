@@ -65,7 +65,9 @@ const App: React.FC = () => {
 
     map.addLayer(vectorLayer);
 
-    initialLocations.forEach((location) => addMarker(location.name, location.coordinates));
+    initialLocations.forEach((location) =>
+      addMarker(location.name, location.coordinates)
+    );
 
     // Create Popup Overlay
     const overlay = new Overlay({
@@ -80,7 +82,10 @@ const App: React.FC = () => {
 
     // Click event to show popups
     map.on("singleclick", (event) => {
-      const feature = map.forEachFeatureAtPixel(event.pixel, (feature) => feature as Feature);
+      const feature = map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => feature as Feature
+      );
       if (feature && feature.get("name")) {
         const coordinates = (feature.getGeometry() as Point).getCoordinates();
         overlay.setPosition(coordinates);
@@ -190,7 +195,9 @@ const App: React.FC = () => {
       return;
     }
 
-    const flightCoordinates = (flightPath.getGeometry() as LineString).getCoordinates().slice(2);
+    const flightCoordinates = (flightPath.getGeometry() as LineString)
+      .getCoordinates()
+      .slice(2);
 
     if (flightCoordinates.length < 2) {
       alert("Not enough unique points to animate.");
@@ -204,7 +211,11 @@ const App: React.FC = () => {
 
     setIsFlying(true);
 
-    const interpolate = (start: Coordinate, end: Coordinate, fraction: number): Coordinate => {
+    const interpolate = (
+      start: Coordinate,
+      end: Coordinate,
+      fraction: number
+    ): Coordinate => {
       return [
         start[0] + (end[0] - start[0]) * fraction,
         start[1] + (end[1] - start[1]) * fraction,
@@ -215,7 +226,10 @@ const App: React.FC = () => {
       if (step > stepsPerSegment) {
         currentIndex++;
         if (currentIndex < flightCoordinates.length - 1) {
-          flyToNextSegment(flightCoordinates[currentIndex], flightCoordinates[currentIndex + 1]);
+          flyToNextSegment(
+            flightCoordinates[currentIndex],
+            flightCoordinates[currentIndex + 1]
+          );
         } else {
           setTimeout(() => {
             vectorSourceRef.current.removeFeature(airplane!);
@@ -231,18 +245,48 @@ const App: React.FC = () => {
       const fraction = step / stepsPerSegment;
       airplane!.setGeometry(new Point(interpolate(start, end, fraction)));
 
-      setTimeout(() => flyToNextSegment(start, end, step + 1), segmentDuration / stepsPerSegment);
+      setTimeout(
+        () => flyToNextSegment(start, end, step + 1),
+        segmentDuration / stepsPerSegment
+      );
     };
 
     flyToNextSegment(flightCoordinates[0], flightCoordinates[1]);
   };
 
   return (
-    <div>
-      <button disabled={isFlying} onClick={createFlightPath}>Create Flight Path</button>
-      <button disabled={isFlying} onClick={startFlightAnimation}>Start Flight</button>
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+      }}
+    >
+      <h2>🗺️ OpenLayers React Map (TSX) - Realistic Flight Animation</h2>
+      <p>📍 **Double-click to add a new point!**</p>
+      <p>🛫 **Click "Create Flight Path" to draw a route!**</p>
+      <p>✈️ **Click "Start Flight" to animate the airplane smoothly!**</p>
+      <div
+        style={{
+          display: "flex",
+          gap: 5,
+          paddingBottom: 5,
+        }}
+      >
+        <button disabled={isFlying} onClick={createFlightPath}>
+          Create Flight Path
+        </button>
+        <button disabled={isFlying} onClick={startFlightAnimation}>
+          Start Flight
+        </button>
+      </div>
+
       <div ref={mapRef} style={{ width: "100%", height: "80vh" }}></div>
-      <div ref={popupContainerRef}><div ref={popupContentRef}></div></div>
+      <div ref={popupContainerRef}>
+        <div ref={popupContentRef}></div>
+      </div>
     </div>
   );
 };
