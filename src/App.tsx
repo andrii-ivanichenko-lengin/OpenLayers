@@ -60,7 +60,7 @@ const App: React.FC = () => {
         new Style({
           image: new Icon({
             src: "https://upload.wikimedia.org/wikipedia/commons/e/ec/RedDot.svg",
-            scale: 0.3,
+            scale: 1,
           }),
         })
       );
@@ -105,12 +105,12 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ width: "100%", display: "flex", alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column' }}>
+    <div style={{ width: "100%", display: "flex", alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
     
 
       
       <h2>OpenLayers React Map (TSX)</h2>
-      <div ref={mapRef} style={{ width: "100%", height: "500px", position: "relative", maxWidth: 600 }}></div>
+      <div ref={mapRef} style={{ width: "100%", height: "90vh", position: "relative" }}></div>
       
       <div
         ref={popupContainerRef}
