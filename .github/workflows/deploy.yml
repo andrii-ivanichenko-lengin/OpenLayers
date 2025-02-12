@@ -27,7 +27,7 @@ jobs:
         run: npm install
 
       - name: Build Vite project
-        run: npm run build
+        run: npm run build -- --base=/OpenLayers/
 
       - name: Disable Jekyll
         run: touch dist/.nojekyll
